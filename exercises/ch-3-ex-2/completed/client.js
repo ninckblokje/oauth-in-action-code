@@ -175,12 +175,6 @@ var refreshAccessToken = function(req, res) {
 		// try again
 		res.redirect('/fetch_resource');
 		return;
-	} else {
-		console.log('No refresh token, asking the user to get a new access token');
-		// tell the user to get a new access token
-		refresh_token = null;
-		res.render('error', {error: 'Unable to refresh token.'});
-		return;
 	}
 };
 
