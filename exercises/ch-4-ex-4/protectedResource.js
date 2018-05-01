@@ -22,7 +22,7 @@ var resource = {
 	"description": "This data has been protected by OAuth 2.0"
 };
 
-var getAccessToken = function(req, res, next) {
+var getAccessToken = function (req, res, next) {
 	var inToken = null;
 	var auth = req.headers['authorization'];
 	if (auth && auth.toLowerCase().indexOf('bearer') == 0) {
@@ -32,13 +32,13 @@ var getAccessToken = function(req, res, next) {
 	} else if (req.query && req.query.access_token) {
 		inToken = req.query.access_token
 	}
-	
+
 	console.log('Incoming token: %s', inToken);
-	nosql.one(function(token) {
+	nosql.one(function (token) {
 		if (token.access_token == inToken) {
-			return token;	
+			return token;
 		}
-	}, function(err, token) {
+	}, function (err, token) {
 		if (token) {
 			console.log("We found a matching token: %s", inToken);
 		} else {
@@ -50,7 +50,7 @@ var getAccessToken = function(req, res, next) {
 	});
 };
 
-var requireAccessToken = function(req, res, next) {
+var requireAccessToken = function (req, res, next) {
 	if (req.access_token) {
 		next();
 	} else {
@@ -70,21 +70,53 @@ var bobFavorites = {
 	'music': ['baroque', 'ukulele', 'baroque ukulele']
 };
 
-app.get('/favorites', getAccessToken, requireAccessToken, function(req, res) {
-	
+app.get('/favorites', getAccessToken, requireAccessToken, function (req, res) {
+
 	/*
 	 * Get different user information based on the information of who approved the token
 	 */
-	
-	var unknown = {user: 'Unknown', favorites: {movies: [], foods: [], music: []}};
-	res.json(unknown);
 
+	var tokenFavs = {};
+	var tokenUser;
+	if (req.access_token.user == 'alice') {
+		tokenUser = 'Alice';
+		tokenFavs = aliceFavorites;
+	} else if (req.access_token.user == 'bob') {
+		tokenUser = 'Bob';
+		tokenFavs = bobFavorites
+	} else {
+		var unknown = {
+			user: 'Unknown', favorites: {
+				movies: [], foods: [],
+				music: []
+			}
+		};
+		res.json(unknown);
+	}
+
+	var ret = { user: tokenUser, favorites: {
+		movies: [],
+		foods: [],
+		music: []
+	}};
+
+	if (req.access_token.scope.includes('movies')) {
+		ret.favorites.movies.push(...tokenFavs.movies);
+	}
+	if (req.access_token.scope.includes('foods')) {
+		ret.favorites.foods.push(...tokenFavs.foods);
+	}
+	if (req.access_token.scope.includes('music')) {
+		ret.favorites.music.push(...tokenFavs.music);
+	}
+
+	res.json(ret);
 });
 
 var server = app.listen(9002, 'localhost', function () {
-  var host = server.address().address;
-  var port = server.address().port;
+	var host = server.address().address;
+	var port = server.address().port;
 
-  console.log('OAuth Resource Server is listening at http://%s:%s', host, port);
+	console.log('OAuth Resource Server is listening at http://%s:%s', host, port);
 });
- 
+
